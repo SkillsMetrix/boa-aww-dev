@@ -57,3 +57,43 @@ public class MessageSender {
 
 }
 
+
+
+
+package com.sqs.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@ComponentScan("com")
+public class SpringSQSApp implements CommandLineRunner{
+
+	@Autowired
+	private  MessageSender messageSender;
+	
+	
+	public static void main(String[] args) {
+		SpringApplication.run(SpringSQSApp.class, args);
+
+	}
+
+	@Override
+	public void run(String... args) throws Exception {
+		{
+			int i=1;
+			while(true) {
+				messageSender.sendMessage("Hello BankOfAmerica "+ i);
+				Thread.sleep(10000);
+				++i;
+			}
+		}
+		
+	}
+
+}
+
+
