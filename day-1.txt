@@ -1,89 +1,15 @@
-import boto3
-import json
-
-region = "us-east-1"  # change as needed
-sns = boto3.client("sns", region_name=region)
-
-def create_topic(name):
-    resp = sns.create_topic(Name=name)
-    topic_arn = resp["TopicArn"]
-    print("Created/Found topic:", topic_arn)
-    return topic_arn
-
-def publish_message(topic_arn, subject, message_dict):
-    resp = sns.publish(
-        TopicArn=topic_arn,
-        Subject=subject,
-        Message=json.dumps(message_dict)  # or a plain string
-    )
-    print("Published message id:", resp.get("MessageId"))
-
-if __name__ == "__main__":
-    topic = create_topic("demo-eventbridge-sns-topic")
-    publish_message(topic, "TestSubject", {"hello": "Bank of America", "type": "direct-sns"})
-
------------
-
 
 import boto3
 import json
 
-region = "us-east-1"
+s3= boto3.client('s3')
 
-sns = boto3.client("sns", region_name=region)
-events = boto3.client("events", region_name=region)
+def lambda_handler(event,context):
+    bucket= event['Records'][0]['s3']['bucket']['name']
+    key= event['Records'][0]['s3']['object']['key']
+    print(f"File Uploaded: {key} in bucket: {bucket}")
 
-# 1) Create SNS topic
-def create_topic():
-    resp = sns.create_topic(Name="demo-eventbridge-topic")
-    print("SNS Topic ARN:", resp["TopicArn"])
-    return resp["TopicArn"]
-
-# 2) Create EventBridge rule
-def create_rule():
-    pattern = {
-        "source": ["my.app"],
-        "detail-type": ["MyAppEvent"]
+    return {
+        'statusCode': 200,
+        'body': json.dumps(f'Hello from Lambda!')
     }
-    resp = events.put_rule(
-        Name="demo-eb-rule",
-        EventPattern=json.dumps(pattern),
-        State="ENABLED"
-    )
-    print("Rule ARN:", resp["RuleArn"])
-    return resp["RuleArn"]
-
-# 3) Attach SNS target to EventBridge rule
-def attach_target(topic_arn):
-    resp = events.put_targets(
-        Rule="demo-eb-rule",
-        Targets=[
-            {
-                "Id": "sns-target",
-                "Arn": topic_arn
-            }
-        ]
-    )
-    print("Target attached:", resp)
-
-# 4) Push an event to EventBridge
-def send_event():
-    event = {
-        "Source": "my.app",
-        "DetailType": "MyAppEvent",
-        "Detail": json.dumps({
-            "user": "amarjeet",
-            "action": "login",
-            "city": "Delhi"
-        })
-    }
-    resp = events.put_events(Entries=[event])
-    print("Event sent:", resp)
-
-if __name__ == "__main__":
-    topic_arn = create_topic()
-    create_rule()
-    attach_target(topic_arn)
-    send_event()
-
-
