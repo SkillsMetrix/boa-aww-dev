@@ -1,53 +1,89 @@
 import boto3
+import json
 
- 
-# CONFIGURATION
- 
-AWS_ACCESS_KEY = ""
-AWS_SECRET_KEY = ""
-AWS_REGION = "us-east-1"
+region = "us-east-1"  # change as needed
+sns = boto3.client("sns", region_name=region)
 
-TOPIC_NAME = "amartop"
-EMAIL_TO_SUBSCRIBE = "amarjeet.sn1@gmail.com"
-SUBJECT = "Test Email from AWS SNS + Python"
-MESSAGE = "Hello! This is a test email sent using AWS SNS from Python."
+def create_topic(name):
+    resp = sns.create_topic(Name=name)
+    topic_arn = resp["TopicArn"]
+    print("Created/Found topic:", topic_arn)
+    return topic_arn
+
+def publish_message(topic_arn, subject, message_dict):
+    resp = sns.publish(
+        TopicArn=topic_arn,
+        Subject=subject,
+        Message=json.dumps(message_dict)  # or a plain string
+    )
+    print("Published message id:", resp.get("MessageId"))
+
+if __name__ == "__main__":
+    topic = create_topic("demo-eventbridge-sns-topic")
+    publish_message(topic, "TestSubject", {"hello": "Bank of America", "type": "direct-sns"})
+
+-----------
 
 
-# CREATE SNS CLIENT
+import boto3
+import json
 
-sns = boto3.client(
-    "sns",
-    region_name=AWS_REGION,
-    aws_access_key_id=AWS_ACCESS_KEY,
-    aws_secret_access_key=AWS_SECRET_KEY
-)
+region = "us-east-1"
 
- 
-# CREATE SNS TOPIC
- 
-topic = sns.create_topic(Name=TOPIC_NAME)
-topic_arn = topic["TopicArn"]
-print("Topic ARN:", topic_arn)
+sns = boto3.client("sns", region_name=region)
+events = boto3.client("events", region_name=region)
 
- 
-# SUBSCRIBE EMAIL TO TOPIC
- 
-sub = sns.subscribe(
-    TopicArn=topic_arn,
-    Protocol="email",
-    Endpoint=EMAIL_TO_SUBSCRIBE
-)
-print("Subscription ARN (PendingConfirmation):", sub["SubscriptionArn"])
+# 1) Create SNS topic
+def create_topic():
+    resp = sns.create_topic(Name="demo-eventbridge-topic")
+    print("SNS Topic ARN:", resp["TopicArn"])
+    return resp["TopicArn"]
 
-print("⚠️ Check your email and CONFIRM the subscription before sending!")
+# 2) Create EventBridge rule
+def create_rule():
+    pattern = {
+        "source": ["my.app"],
+        "detail-type": ["MyAppEvent"]
+    }
+    resp = events.put_rule(
+        Name="demo-eb-rule",
+        EventPattern=json.dumps(pattern),
+        State="ENABLED"
+    )
+    print("Rule ARN:", resp["RuleArn"])
+    return resp["RuleArn"]
 
- 
-# PUBLISH MESSAGE TO TOPIC
- 
-publish_response = sns.publish(
-    TopicArn=topic_arn,
-    Subject=SUBJECT,
-    Message=MESSAGE
-)
+# 3) Attach SNS target to EventBridge rule
+def attach_target(topic_arn):
+    resp = events.put_targets(
+        Rule="demo-eb-rule",
+        Targets=[
+            {
+                "Id": "sns-target",
+                "Arn": topic_arn
+            }
+        ]
+    )
+    print("Target attached:", resp)
 
-print("Email sent! Message ID:", publish_response["MessageId"])
+# 4) Push an event to EventBridge
+def send_event():
+    event = {
+        "Source": "my.app",
+        "DetailType": "MyAppEvent",
+        "Detail": json.dumps({
+            "user": "amarjeet",
+            "action": "login",
+            "city": "Delhi"
+        })
+    }
+    resp = events.put_events(Entries=[event])
+    print("Event sent:", resp)
+
+if __name__ == "__main__":
+    topic_arn = create_topic()
+    create_rule()
+    attach_target(topic_arn)
+    send_event()
+
+
