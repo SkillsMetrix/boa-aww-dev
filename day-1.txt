@@ -1,99 +1,53 @@
-package com.sqs.config;
+import boto3
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+ 
+# CONFIGURATION
+ 
+AWS_ACCESS_KEY = ""
+AWS_SECRET_KEY = ""
+AWS_REGION = "us-east-1"
 
-import io.awspring.cloud.sqs.operations.SqsTemplate;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsAsyncClient;
-
-@Configuration
-public class AwsSQSConfig {
-	@Value("${spring.cloud.aws.credentials.access-key}")
-	private String accessKey;
-	@Value("${spring.cloud.aws.credentials.secret-key}")
-	private String secretKey;
-	@Value("${spring.cloud.aws.region.static}")
-	private String region;
-	
-	@Bean
-	SqsAsyncClient asyncClient() {
-		return SqsAsyncClient.builder().region(Region.of(region))
-				.credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey)))
-				.build();
-	}
-	@Bean
-	public SqsTemplate sqsTemplate(SqsAsyncClient sqsAsyncClient) {
-		return SqsTemplate.builder().sqsAsyncClient(sqsAsyncClient).build();
-	}
-
-}
+TOPIC_NAME = "amartop"
+EMAIL_TO_SUBSCRIBE = "amarjeet.sn1@gmail.com"
+SUBJECT = "Test Email from AWS SNS + Python"
+MESSAGE = "Hello! This is a test email sent using AWS SNS from Python."
 
 
------
+# CREATE SNS CLIENT
 
+sns = boto3.client(
+    "sns",
+    region_name=AWS_REGION,
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY
+)
 
-package com.sqs.service;
+ 
+# CREATE SNS TOPIC
+ 
+topic = sns.create_topic(Name=TOPIC_NAME)
+topic_arn = topic["TopicArn"]
+print("Topic ARN:", topic_arn)
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+ 
+# SUBSCRIBE EMAIL TO TOPIC
+ 
+sub = sns.subscribe(
+    TopicArn=topic_arn,
+    Protocol="email",
+    Endpoint=EMAIL_TO_SUBSCRIBE
+)
+print("Subscription ARN (PendingConfirmation):", sub["SubscriptionArn"])
 
-import io.awspring.cloud.sqs.operations.SqsTemplate;
+print("⚠️ Check your email and CONFIRM the subscription before sending!")
 
-@Service
-public class MessageSender {
-	@Autowired
-	private SqsTemplate sqsTemplate;
-	
-	private final String queueName="boa-amar-queue";
-	
-	public void sendMessage(String message) {
-		sqsTemplate.send(sqsSendOptions -> sqsSendOptions.queue("boa-amar-queue").payload(message));
-		System.out.println(message + " = sent successfully to the "+ queueName);
-	}
+ 
+# PUBLISH MESSAGE TO TOPIC
+ 
+publish_response = sns.publish(
+    TopicArn=topic_arn,
+    Subject=SUBJECT,
+    Message=MESSAGE
+)
 
-}
-
-
-
-
-package com.sqs.service;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
-
-@SpringBootApplication
-@ComponentScan("com")
-public class SpringSQSApp implements CommandLineRunner{
-
-	@Autowired
-	private  MessageSender messageSender;
-	
-	
-	public static void main(String[] args) {
-		SpringApplication.run(SpringSQSApp.class, args);
-
-	}
-
-	@Override
-	public void run(String... args) throws Exception {
-		{
-			int i=1;
-			while(true) {
-				messageSender.sendMessage("Hello BankOfAmerica "+ i);
-				Thread.sleep(10000);
-				++i;
-			}
-		}
-		
-	}
-
-}
-
-
+print("Email sent! Message ID:", publish_response["MessageId"])
