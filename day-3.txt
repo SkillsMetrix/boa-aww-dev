@@ -24,3 +24,46 @@ def send_user_data():
 
 if __name__ == "__main__":
     send_user_data()
+
+
+
+--------
+
+import json
+import boto3
+import base64
+from datetime import datetime
+
+s3= boto3.client('s3')
+BUCKET_NAME="my-output-bucket-amr"
+
+def lambda_handler(event,context):
+    print("Event: ",event)
+
+    output_data=[]
+
+    # kinesis records come base64 encoded
+    for record in event['Records']:
+        payload = base64.b64decode(record["kinesis"]["data"])
+        data_json= json.loads(payload)
+        output_data.append(data_json)
+    
+    #  Convert processed records into JSON String
+
+    file_content = json.dumps(output_data,indent=2)
+
+    # store in s3 with timestamp
+
+    file_name= f"processed-data-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
+
+    s3.put_object(
+        Bucket=BUCKET_NAME,
+        Key=file_name,
+        Body=file_content
+    )
+    print("Saved to S3: ",file_name)
+
+    return {
+        "statusCode": 200,
+        "body": "Data processed and stroed in S3"
+    }
