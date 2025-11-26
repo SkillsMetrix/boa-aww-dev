@@ -1,0 +1,26 @@
+import boto3
+import json
+
+kinesis = boto3.client(
+    'kinesis',
+    region_name='us-east-1'
+)
+STREAM_NAME ='my-demo-stream'
+
+def send_user_data():
+    records=[
+        {"name": "john","email":"john@mail.com","city":"pune-1"},
+        {"name": "Emma","email":"Emma@mail.com","city":"Mumbai"},
+        {"name": "Ravi","email":"Ravi@mail.com","city":"chennai"}
+    ]
+
+    for record in records:
+        response= kinesis.put_record(
+            StreamName=STREAM_NAME,
+            Data=json.dumps(record),
+            PartitionKey="partion-1"
+        )
+        print("Sent:", record)
+
+if __name__ == "__main__":
+    send_user_data()
