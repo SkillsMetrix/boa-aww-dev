@@ -67,3 +67,37 @@ def lambda_handler(event,context):
         "statusCode": 200,
         "body": "Data processed and stroed in S3"
     }
+
+
+
+------------
+
+aws ssm put-parameter \
+  --name "/myapp/dev/db_password" \
+  --value "Pass@123" \
+  --type SecureString \
+  --region us-east-1
+
+
+
+
+import boto3
+
+ssm = boto3.client('ssm')
+
+ssm.put_parameter(
+    Name="/myapp/dev/db_password",
+    Value="Pass@123",
+    Type="SecureString",
+    Overwrite=True
+)
+import boto3
+
+ssm = boto3.client('ssm')
+
+value = ssm.get_parameter(
+    Name="/myapp/dev/db_password",
+    WithDecryption=True
+)
+
+print(value['Parameter']['Value'])
