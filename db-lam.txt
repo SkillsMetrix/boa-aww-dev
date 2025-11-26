@@ -105,3 +105,26 @@ def lambda_handler(event,context):
             )
     return {"status": "ok"}
 
+
+----
+
+
+import json
+import boto3
+import base64
+
+secret_name="aws-managed-secret"
+region_name='us-east-1'
+
+session=boto3.session.Session()
+client= session.client(
+    service_name='secretmanager',
+    region_name =region_name
+)
+def lambda_handler(event,context):
+    get_secret_value_response = client.get_secret_value(
+        SecretId= secret_name
+    )
+    print(get_secret_value_response)
+    secret= get_secret_value_response['SecretString']
+    print (secret)
