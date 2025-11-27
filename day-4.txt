@@ -8,3 +8,24 @@ spec:
   containers:
   - name: myapp
     image: cammey20/amar_custom_nginx
+
+
+
+
+
+ exit
+    2  halt
+    3  kubectl get nodes
+    4  kubectl get po
+    5  kubectl get ns
+    6  vi poddemo.yaml
+    7  ls
+    8  kubectl apply -f poddemo.yaml 
+    9  kubectl get po
+   10  kubectl get po -owide
+   11  kubectl describe po myapp
+   12  clear
+   13  kubectl get svc
+   14  kubectl expose po myapp --type=NodePort --port=80
+   15  kubectl get svc
+   16  history
