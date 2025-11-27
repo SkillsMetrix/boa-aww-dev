@@ -49,3 +49,39 @@ ubectl apply -f svcdemo.yaml
    13  kubectl get po
    14  kubectl delete po --all
    15  kubectl get po
+
+
+
+-----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-minimal
+spec:
+  replicas: 4
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 2
+  selector:
+    matchLabels:
+      app: nginx-minimal
+  template:
+    metadata:
+      labels:
+        app: nginx-minimal
+    spec:
+      initContainers:
+        - name: wait for backend
+          image: busybox
+          command: ["sh","-c","until nc -z my-backend 8080; do sleep 2; done"]
+      containers:
+      - name: myapp
+        image: cammey20/amar_custom_nginx
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 5
